@@ -4,8 +4,14 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-class MyStore extends Module
+/**
+ * Class MoySklad
+ *
+ * @author Oleg Kachinsky <logansoleg@gmail.com>
+ */
+class MoySklad extends Module
 {
+
     /**
      * @var boolean $_errors error
      */
@@ -16,10 +22,10 @@ class MyStore extends Module
      */
     public function __construct()
     {
-        $this->name    = 'mystore';
-        $this->tab     = 'my_store';
+        $this->name    = 'Moy Sklad';
+        $this->tab     = 'moy_sklad';
         $this->version = '1.0';
-        $this->author  = 'Andrew';
+        $this->author  = 'Andrew & Oleg';
 
         parent::__construct();
 
@@ -37,6 +43,7 @@ class MyStore extends Module
         if (!parent::install()) {
             return false;
         }
+
         return true;
     }
 
