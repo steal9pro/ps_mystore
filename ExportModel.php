@@ -1,6 +1,6 @@
 <?php
 
-include_once(dirname(__FILE__) . '/MoySkladModel.php');
+include_once(dirname(__FILE__) . '/MoySkladLogic.php');
 
 /**
  * ExportModel
@@ -33,11 +33,13 @@ class ExportModel extends ObjectModel
 
     /**
      * Export goods to moysklad
+     *
+     * @param null $goods
      */
-    public function exportGoods()
+    public function exportGoods($goods = null)
     {
-        $manager = new MoySkladModel($this->login, $this->password);
+        $manager = new MoySkladLogic($this->login, $this->password);
 
-
+        $manager->updateGoods($goods);
     }
 }
