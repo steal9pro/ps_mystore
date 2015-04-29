@@ -7,7 +7,6 @@
  */
 class MoySkladLogic extends ObjectModel
 {
-
     /**
      * @var string $login Login to MoySklad API
      */

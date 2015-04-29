@@ -115,7 +115,30 @@ class MoySklad extends Module
                 // TODO: throw error
             }
 
-            //$attributes = Product::getAttributesInformationsByProduct($productObject->id);
+            $combinations = $productObject->getAttributeCombinations($this->langId);
+
+            foreach ($combinations as $key => $combination) {
+                if (!isset($customArray[$j]['name'])) {
+                    $customArray[$j]['name'] = $productObject->name[$this->langId] . "_" .
+                                               $combination['group_name'] . "_" .
+                                               $combination['attribute_name'];
+                }
+
+                if ($key % 2 == 1) {
+                    $customArray[$j]['name'] .= "_" . $combination['group_name'] . "_" . $combination['attribute_name'];
+
+                    $productPrice = floatval($productObject->price);
+                    $combinationPrice = floatval(Combination::getPrice($productObject->id));
+                    $salePrice = number_format($productPrice + $combinationPrice, 2, '', '');
+
+                    $customArray[$j]['salePrice']      = $salePrice;
+                    $customArray[$j]['vat']            = $product['rate'];
+                    $customArray[$j]['productCode']    = $productObject->reference;
+                    $customArray[$j]['product_sku_id'] = $productObject->id . "_" .
+                                                         $combination['id_product_attribute'];
+                    $j++;
+                }
+            }
 
             $customArray[$j]['name']           = $productObject->name[$this->langId];
             $customArray[$j]['salePrice']      = number_format($productObject->price, 2, '', '');
@@ -126,7 +149,7 @@ class MoySklad extends Module
             $j++;
         }
 
-        return $customArray;
+            return $customArray;
     }
 
     /**
@@ -176,9 +199,6 @@ class MoySklad extends Module
                 'submit' => [
                     'title' => 'Submit',
                 ],
-                'button' => [
-                    'title' => 'Export'
-                ]
             ],
         ];
 
