@@ -32,14 +32,26 @@ class ExportModel extends ObjectModel
     }
 
     /**
-     * Export goods to moysklad
+     * Export goods to moysklad service
      *
-     * @param null $goods
+     * @param array $goods
      */
     public function exportGoods($goods = null)
     {
         $manager = new MoySkladLogic($this->login, $this->password);
 
         $manager->updateGoods($goods);
+    }
+
+    /**
+     * Export companies to moysklad service
+     *
+     * @param array $companies
+     */
+    public function exportCompanies($companies = null)
+    {
+        $manager = new MoySkladLogic($this->login, $this->password);
+
+        $manager->updateCompanies($companies);
     }
 }

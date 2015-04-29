@@ -128,8 +128,6 @@ class MoySkladLogic extends ObjectModel
         $resultXML->addChild('contact');
         $resultXML->contact->addAttribute('email', $company['email']);
 
-        var_dump($resultXML);
-
         return $resultXML;
     }
 

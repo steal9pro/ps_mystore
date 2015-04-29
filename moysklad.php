@@ -87,37 +87,69 @@ class MoySklad extends Module
             $login    = Tools::getValue('moysklad_login');
             $password = Tools::getValue('moysklad_password');
 
-            $exportModel = new ExportModel(
-                $login,
-                $password
-            );
+            $exportModel = new ExportModel($login, $password);
 
-            $productsArray = Product::getProducts($this->langId, 0, 1000, 'id_product', 'ASC');
-            $customArray   = [];
-            $j             = 0;
-
-            foreach ($productsArray as $product) {
-                $productObject = new Product($product['id_product']);
-
-                if (!Validate::isLoadedObject($productObject)) {
-                    // TODO: throw error
-                }
-
-//                $attributes = Product::getAttributesInformationsByProduct($productObject->id);
-
-                $customArray[$j]['name']           = $productObject->name[$this->langId];
-                $customArray[$j]['salePrice']      = number_format($productObject->price, 2, '', '');
-                $customArray[$j]['vat']            = $product['rate'];
-                $customArray[$j]['productCode']    = $productObject->reference;
-                $customArray[$j]['product_sku_id'] = $productObject->id;
-                $j++;
-            }
-
-
-            $exportModel->exportGoods($customArray);
+            $exportModel->exportGoods($this->getFormattedProducts());
+            $exportModel->exportCompanies($this->getFormattedCompanies());
         }
 
         return $this->renderForm();
+    }
+
+    /**
+     * Get formatted products
+     *
+     * @return array
+     */
+    private function getFormattedProducts()
+    {
+        $productsArray = Product::getProducts($this->langId, 0, 1000, 'id_product', 'ASC');
+        $customArray   = [];
+
+        $j = 0;
+
+        foreach ($productsArray as $product) {
+            $productObject = new Product($product['id_product']);
+
+            if (!Validate::isLoadedObject($productObject)) {
+                // TODO: throw error
+            }
+
+            //$attributes = Product::getAttributesInformationsByProduct($productObject->id);
+
+            $customArray[$j]['name']           = $productObject->name[$this->langId];
+            $customArray[$j]['salePrice']      = number_format($productObject->price, 2, '', '');
+            $customArray[$j]['vat']            = $product['rate'];
+            $customArray[$j]['productCode']    = $productObject->reference;
+            $customArray[$j]['product_sku_id'] = $productObject->id;
+
+            $j++;
+        }
+
+        return $customArray;
+    }
+
+    /**
+     * Get formatted companies
+     *
+     * @return array
+     */
+    private function getFormattedCompanies()
+    {
+        $companiesArray = Customer::getCustomers();
+        $customArray   = [];
+
+        $j = 0;
+
+        foreach ($companiesArray as $company) {
+            $customArray[$j]['name'] = $company['firstname'] . " " . $company['lastname'];
+            $customArray[$j]['email'] = $company['email'];
+            $customArray[$j]['code'] = $company['id_customer'];
+
+            $j++;
+        }
+
+        return $customArray;
     }
 
     /**
@@ -125,7 +157,7 @@ class MoySklad extends Module
      *
      * @return string
      */
-    public function renderForm()
+    private function renderForm()
     {
         $fieldsForm = [
             'form' => [
@@ -143,6 +175,9 @@ class MoySklad extends Module
                 ],
                 'submit' => [
                     'title' => 'Submit',
+                ],
+                'button' => [
+                    'title' => 'Export'
                 ]
             ],
         ];
@@ -159,8 +194,8 @@ class MoySklad extends Module
         $helper->identifier               = $this->identifier;
         $helper->submit_action            = 'submitModule';
         $helper->currentIndex             = $this->context
-                                                ->link
-                                                ->getAdminLink('AdminModules', false) . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name;
+            ->link
+            ->getAdminLink('AdminModules', false) . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name;
         $helper->token                    = Tools::getAdminTokenLite('AdminModules');
 
         $helper->tpl_vars = [
@@ -179,7 +214,7 @@ class MoySklad extends Module
      *
      * @return array
      */
-    public function getConfigFieldsValues()
+    private function getConfigFieldsValues()
     {
         return [
             'moysklad_login'    => Configuration::get('PS_MOYSKLAD_LOGIN'),
