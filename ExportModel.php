@@ -54,4 +54,11 @@ class ExportModel extends ObjectModel
 
         $manager->updateCompanies($companies);
     }
+
+    public function exportOrders($orders = null)
+    {
+        $manager = new MoySkladLogic($this->login, $this->password);
+
+        $manager->createCustomerOrder($orders);
+    }
 }
