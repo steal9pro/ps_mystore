@@ -53,7 +53,7 @@ class MoySkladLogic extends ObjectModel
      *
      * @return string XML document
      */
-    public function getGoodsXml($filter = [], $count = 1000, $start = 0)
+    private function getGoodsXml($filter = [], $count = 1000, $start = 0)
     {
         $url    = '/exchange/rest/ms/xml/Good/list?' . $this->buildUrl($filter, $count, $start);
         $result = $this->handleRequest($url, 'GET');
@@ -68,7 +68,7 @@ class MoySkladLogic extends ObjectModel
      *
      * @return SimpleXMLElement
      */
-    public function createGoodXml($product)
+    private function createGoodXml($product)
     {
         $dataXML = simplexml_load_string('<good></good>');
         $dataXML->addAttribute('name', $product['name']);
@@ -87,7 +87,7 @@ class MoySkladLogic extends ObjectModel
      * @param SimpleXMLElement $root Root
      * @param SimpleXMLElement $new  New element
      */
-    public function xmlAdopt($root, $new)
+    private function xmlAdopt($root, $new)
     {
         $node = $root->addChild($new->getName(), (string) $new);
         foreach ($new->attributes() as $attr => $value) {
@@ -134,7 +134,7 @@ class MoySkladLogic extends ObjectModel
      *
      * @return SimpleXMLElement
      */
-    public function createCompanyXml($company)
+    private function createCompanyXml($company)
     {
         $resultXML = simplexml_load_string('<company></company>');
         $resultXML->addAttribute('name', $company['name']);
@@ -154,7 +154,7 @@ class MoySkladLogic extends ObjectModel
      *
      * @return SimpleXMLElement
      */
-    public function getCompaniesXml($filter = [], $count = 1000, $start = 0)
+    private function getCompaniesXml($filter = [], $count = 1000, $start = 0)
     {
         $url    = '/exchange/rest/ms/xml/Company/list?' . $this->buildUrl($filter, $count, $start);
         $result = $this->handleRequest($url, 'GET');
@@ -190,8 +190,6 @@ class MoySkladLogic extends ObjectModel
 
         $url = '/exchange/rest/ms/xml/Company/list/update';
         $this->handleRequest($url, 'PUT', $existingCompaniesXml->asXML());
-
-
     }
 
     /**
@@ -349,7 +347,7 @@ class MoySkladLogic extends ObjectModel
      *
      * @return string
      */
-    public function getMyCompanyId()
+    private function getMyCompanyId()
     {
         if (!$this->myCompanyId) {
             $url = '/exchange/rest/ms/xml/MyCompany/list';
@@ -366,7 +364,7 @@ class MoySkladLogic extends ObjectModel
      *
      * @return string
      */
-    protected function getOrderMetadata()
+    private function getOrderMetadata()
     {
         if (!$this->orderMetadata) {
             $url = '/exchange/rest/ms/xml/Metadata/list?filter=code%3DCustomerOrder';
@@ -391,7 +389,7 @@ class MoySkladLogic extends ObjectModel
      *
      * @return string
      */
-    protected function getAllOrderStatus()
+    private function getAllOrderStatus()
     {
         if (!$this->orderStatus) {
             $url = '/exchange/rest/ms/xml/Workflow/list?filter=code%3DCustomerOrder';
@@ -416,12 +414,24 @@ class MoySkladLogic extends ObjectModel
      *
      * @return SimpleXMLElement
      */
-    public function getCustomerOrdersXml($filter = [], $count = 1000, $start = 0)
+    private function getCustomerOrdersXml($filter = [], $count = 1000, $start = 0)
     {
         $url    = '/exchange/rest/ms/xml/CustomerOrder/list?' . $this->buildUrl($filter, $count, $start);
         $result = $this->handleRequest($url, 'GET');
 
         return $result;
+    }
+
+    /**
+     * Update customer orders
+     *
+     * @param array $orders
+     */
+    public function updateCustomerOrders($orders)
+    {
+        foreach ($orders as $order) {
+            $this->createCustomerOrder($order);
+        }
     }
 
     /**
@@ -431,7 +441,7 @@ class MoySkladLogic extends ObjectModel
      *
      * @return boolean
      */
-    public function createCustomerOrder($order)
+    private function createCustomerOrder($order)
     {
         $orderStatus = $this->getAllOrderStatus();
         //        $orderMetadata = $this->getOrderMetadata();
@@ -447,7 +457,11 @@ class MoySkladLogic extends ObjectModel
         $customerXmlData = $this->parsingXmlDocument($customer);
 
         $resultXML->addAttribute('sourceAgentUuid', $customerXmlData->company->uuid->__toString());
-        $resultXML->addAttribute('stateUuid', $orderStatus[$order['order']['status']]);
+        if (isset($orderStatus[$order['order']['status']])) {
+            $resultXML->addAttribute('stateUuid', $orderStatus[$order['order']['status']]);
+        } else {
+            $resultXML->addAttribute('stateUuid', $orderStatus['Не указано']);
+        }
         $resultXML->addAttribute('applicable', 'true');
         $resultXML->addAttribute('name', $order['order']['order_id']);
         $resultXML->addChild('externalcode', $order['order']['order_id']);
@@ -462,10 +476,6 @@ class MoySkladLogic extends ObjectModel
             $resultXML->addChild('uuid', $customerOrderXmlData->customerOrder->uuid->__toString());
         }
 
-        //        $resultXML->addChild('sum');
-        //        $resultXML->sum->addAttribute('sum', $order['order']['total'] * 100);
-        //        $resultXML->sum->addAttribute('sumInCurrency', $order['order']['total'] * 100);
-
         foreach ($order['orderProducts'] as $product) {
             $productXml     = $this->getGoodsXml([
                 'externalCode' => '=' . $product['id']
@@ -477,24 +487,22 @@ class MoySkladLogic extends ObjectModel
                 return false;
             }
 
-            $i = $resultXML->customerOrderPosition->count() - 1;
+            $i = $resultXML->customerOrderPosition->count();
 
             // Add customer order position
             $resultXML->addChild('customerOrderPosition');
-            $resultXML->customerOrderPosition[$i]->addAttribute('quantity', $product['quantity']);
             $resultXML->customerOrderPosition[$i]->addAttribute('goodUuid', $productXmlData->good->uuid->__toString());
-
-            $productPrice = $product['priceTotal'] / $product['quantity'];
+            $resultXML->customerOrderPosition[$i]->addAttribute('quantity', $product['quantity']);
 
             // Add base price
             $resultXML->customerOrderPosition[$i]->addChild('basePrice');
-            $resultXML->customerOrderPosition[$i]->basePrice->addAttribute('sum', $productPrice * 100);
-            $resultXML->customerOrderPosition[$i]->basePrice->addAttribute('sumInCurrency', $productPrice * 100);
+            $resultXML->customerOrderPosition[$i]->basePrice->addAttribute('sum', $product['product_price']);
+            $resultXML->customerOrderPosition[$i]->basePrice->addAttribute('sumInCurrency', $product['product_price']);
 
             // Add price
             $resultXML->customerOrderPosition[$i]->addChild('price');
-            $resultXML->customerOrderPosition[$i]->price->addAttribute('sum', $productPrice * 100);
-            $resultXML->customerOrderPosition[$i]->price->addAttribute('sumInCurrency', $productPrice * 100);
+            $resultXML->customerOrderPosition[$i]->price->addAttribute('sum', $product['product_price']);
+            $resultXML->customerOrderPosition[$i]->price->addAttribute('sumInCurrency', $product['product_price']);
         }
 
         $url = '/exchange/rest/ms/xml/CustomerOrder/list/update';

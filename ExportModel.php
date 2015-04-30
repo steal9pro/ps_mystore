@@ -34,7 +34,7 @@ class ExportModel extends ObjectModel
     /**
      * Export goods to moysklad service
      *
-     * @param array $goods
+     * @param array $goods Goods
      */
     public function exportGoods($goods = null)
     {
@@ -46,7 +46,7 @@ class ExportModel extends ObjectModel
     /**
      * Export companies to moysklad service
      *
-     * @param array $companies
+     * @param array $companies Customers
      */
     public function exportCompanies($companies = null)
     {
@@ -55,10 +55,15 @@ class ExportModel extends ObjectModel
         $manager->updateCompanies($companies);
     }
 
+    /**
+     * Export customer orders to moysklad service
+     *
+     * @param array $orders Customer Orders
+     */
     public function exportOrders($orders = null)
     {
         $manager = new MoySkladLogic($this->login, $this->password);
 
-        $manager->createCustomerOrder($orders);
+        $manager->updateCustomerOrders($orders);
     }
 }

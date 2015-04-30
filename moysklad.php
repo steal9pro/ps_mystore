@@ -91,6 +91,7 @@ class MoySklad extends Module
 
             $exportModel->exportGoods($this->getFormattedProducts());
             $exportModel->exportCompanies($this->getFormattedCompanies());
+            $exportModel->exportOrders($this->getFormattedCustromerOrders());
         }
 
         return $this->renderForm();
@@ -168,6 +169,45 @@ class MoySklad extends Module
             $customArray[$j]['name'] = $company['firstname'] . " " . $company['lastname'];
             $customArray[$j]['email'] = $company['email'];
             $customArray[$j]['code'] = $company['id_customer'];
+
+            $j++;
+        }
+
+        return $customArray;
+    }
+
+    /**
+     * Get formatted customer orders
+     */
+    private function getFormattedCustromerOrders()
+    {
+        // Get orders information
+        $orders = Order::getOrdersWithInformations();
+        $customArray = [];
+
+        $j = 0;
+
+        // Create custom array of orders
+        foreach ($orders as $order) {
+            // Fill details for order
+            $customArray[$j]['order']['order_id'] = $order['id_order'];
+            $customArray[$j]['order']['status'] = $order['state_name'];
+            $customArray[$j]['order']['total'] = number_format('12', 2, '', '');
+
+            $orderDetails = OrderDetail::getList($order['id_order']);
+
+            $i = 0;
+            // Fill details for order products
+            foreach ($orderDetails as $orderDetail) {
+                $customArray[$j]['orderProducts'][$i]['id'] = $orderDetail['product_id'];
+                $customArray[$j]['orderProducts'][$i]['quantity'] = $orderDetail['product_quantity'];
+                $customArray[$j]['orderProducts'][$i]['product_price'] = number_format($orderDetail['unit_price_tax_incl'], 2, '', '');
+
+                $i++;
+            }
+
+            // Fill details for customer
+            $customArray[$j]['customer']['id'] = $order['id_customer'];
 
             $j++;
         }
