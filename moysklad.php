@@ -200,6 +200,9 @@ class MoySklad extends Module
             // Fill details for order products
             foreach ($orderDetails as $orderDetail) {
                 $customArray[$j]['orderProducts'][$i]['id'] = $orderDetail['product_id'];
+                if (intval($orderDetail['product_attribute_id']) > 0) {
+                    $customArray[$j]['orderProducts'][$i]['id'] .= '_' . $orderDetail['product_attribute_id'];
+                }
                 $customArray[$j]['orderProducts'][$i]['quantity'] = $orderDetail['product_quantity'];
                 $customArray[$j]['orderProducts'][$i]['product_price'] = number_format($orderDetail['unit_price_tax_incl'], 2, '', '');
 

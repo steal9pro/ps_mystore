@@ -18,11 +18,6 @@ class MoySkladLogic extends ObjectModel
     private $password;
 
     /**
-     * @var SimpleXMLElement $orderMetadata
-     */
-    private $orderMetadata;
-
-    /**
      * @var SimpleXMLElement $orderStatus
      */
     private $orderStatus;
@@ -45,60 +40,6 @@ class MoySkladLogic extends ObjectModel
     }
 
     /**
-     * Get list of goods
-     *
-     * @param array $filter
-     * @param int   $count
-     * @param int   $start
-     *
-     * @return string XML document
-     */
-    private function getGoodsXml($filter = [], $count = 1000, $start = 0)
-    {
-        $url    = '/exchange/rest/ms/xml/Good/list?' . $this->buildUrl($filter, $count, $start);
-        $result = $this->handleRequest($url, 'GET');
-
-        return $result;
-    }
-
-    /**
-     * Create new good
-     *
-     * @param array $product Product
-     *
-     * @return SimpleXMLElement
-     */
-    private function createGoodXml($product)
-    {
-        $dataXML = simplexml_load_string('<good></good>');
-        $dataXML->addAttribute('name', $product['name']);
-        $dataXML->addAttribute('salePrice', $product['salePrice']);
-        $dataXML->addAttribute('vat', $product['vat']);
-        $dataXML->addAttribute('productCode', $product['productCode']);
-        $dataXML->code         = $product['product_sku_id'];
-        $dataXML->externalcode = $product['product_sku_id'];
-
-        return $dataXML;
-    }
-
-    /**
-     * XML adopt
-     *
-     * @param SimpleXMLElement $root Root
-     * @param SimpleXMLElement $new  New element
-     */
-    private function xmlAdopt($root, $new)
-    {
-        $node = $root->addChild($new->getName(), (string) $new);
-        foreach ($new->attributes() as $attr => $value) {
-            $node->addAttribute($attr, $value);
-        }
-        foreach ($new->children() as $ch) {
-            $this->xmlAdopt($node, $ch);
-        }
-    }
-
-    /**
      * Update/Create goods on moysklad
      *
      * @param array $products Goods
@@ -109,7 +50,8 @@ class MoySkladLogic extends ObjectModel
     {
         $existingGoodsXml = $this->parsingXmlDocument($this->getExistingGoodsXml($products));
         foreach ($products as $product) {
-            if (count($existingGoodsXml->xpath("good/externalcode[.='" . $product['product_sku_id'] . "']"))) {
+            $existingGood = $existingGoodsXml->xpath("good/externalcode[.='" . $product['product_sku_id'] . "']");
+            if (count($existingGood)) {
                 foreach ($existingGoodsXml->xpath('good') as $foundGood) {
                     if ($foundGood->externalcode->__toString() == $product['product_sku_id']) {
                         $foundGood['name'] = $product['name'];
@@ -125,41 +67,6 @@ class MoySkladLogic extends ObjectModel
 
         $url = '/exchange/rest/ms/xml/Good/list/update';
         $this->handleRequest($url, 'PUT', $existingGoodsXml->asXML());
-    }
-
-    /**
-     * Create company XML
-     *
-     * @param array $company
-     *
-     * @return SimpleXMLElement
-     */
-    private function createCompanyXml($company)
-    {
-        $resultXML = simplexml_load_string('<company></company>');
-        $resultXML->addAttribute('name', $company['name']);
-        $resultXML->addChild('code', $company['code']);
-        $resultXML->addChild('contact');
-        $resultXML->contact->addAttribute('email', $company['email']);
-
-        return $resultXML;
-    }
-
-    /**
-     * Get company xml
-     *
-     * @param array $filter
-     * @param int   $count
-     * @param int   $start
-     *
-     * @return SimpleXMLElement
-     */
-    private function getCompaniesXml($filter = [], $count = 1000, $start = 0)
-    {
-        $url    = '/exchange/rest/ms/xml/Company/list?' . $this->buildUrl($filter, $count, $start);
-        $result = $this->handleRequest($url, 'GET');
-
-        return $result;
     }
 
     /**
@@ -193,21 +100,32 @@ class MoySkladLogic extends ObjectModel
     }
 
     /**
-     * Get collection id
+     * Update customer orders
      *
-     * @param String $xmlData
-     *
-     * @return array
+     * @param array $orders
      */
-    private function getCollectionId($xmlData)
+    public function updateCustomerOrders($orders)
     {
-        $temp = $this->parsingXmlDocument($xmlData);
-        $id   = [];
-        foreach ($temp->xpath('id') as $collectionId) {
-            $id[] = $collectionId->__toString();
+        foreach ($orders as $order) {
+            $this->createCustomerOrder($order);
         }
+    }
 
-        return $id;
+    /**
+     * XML adopt
+     *
+     * @param SimpleXMLElement $root Root
+     * @param SimpleXMLElement $new  New element
+     */
+    private function xmlAdopt($root, $new)
+    {
+        $node = $root->addChild($new->getName(), (string) $new);
+        foreach ($new->attributes() as $attr => $value) {
+            $node->addAttribute($attr, $value);
+        }
+        foreach ($new->children() as $ch) {
+            $this->xmlAdopt($node, $ch);
+        }
     }
 
     /**
@@ -307,131 +225,41 @@ class MoySkladLogic extends ObjectModel
     }
 
     /**
-     * Get existing goods
+     * Create company XML
      *
-     * @param $products
-     *
-     * @return string XML document
-     */
-    private function getExistingGoodsXml($products)
-    {
-        $filter['externalCode'] = [];
-        foreach ($products as $product) {
-            $filter['externalCode'][] = '=' . $product['product_sku_id'];
-        }
-        $result = $this->getGoodsXml($filter);
-
-        return $result;
-    }
-
-    /**
-     * Get existing companies
-     *
-     * @param array $companies
-     *
-     * @return string XML document
-     */
-    private function getExistingCompaniesXml($companies)
-    {
-        $filter['code'] = [];
-        foreach ($companies as $company) {
-            $filter['code'][] = '=' . $company['code'];
-        }
-        $result = $this->getCompaniesXml($filter);
-
-        return $result;
-    }
-
-    /**
-     * Отримання id компанії
-     *
-     * @return string
-     */
-    private function getMyCompanyId()
-    {
-        if (!$this->myCompanyId) {
-            $url = '/exchange/rest/ms/xml/MyCompany/list';
-
-            $xmlData           = $this->parsingXmlDocument($this->handleRequest($url, 'GET'));
-            $this->myCompanyId = $xmlData->myCompany->uuid->__toString();
-        }
-
-        return $this->myCompanyId;
-    }
-
-    /**
-     * Get order metadata
-     *
-     * @return string
-     */
-    private function getOrderMetadata()
-    {
-        if (!$this->orderMetadata) {
-            $url = '/exchange/rest/ms/xml/Metadata/list?filter=code%3DCustomerOrder';
-
-            $xml     = $this->handleRequest($url, 'GET');
-            $xmlData = $this->parsingXmlDocument($xml);
-            $result = [];
-            foreach ($xmlData->xpath('embeddedEntityMetadata/attributeMetadata') as $attributeMetadata) {
-                $result[$attributeMetadata->attributes()->name->__toString()] = [
-                    'uuid' => $attributeMetadata->uuid->__toString(),
-                    'type' => 'value' . ucfirst(strtolower($attributeMetadata->attributes()->attrType->__toString()))
-                ];
-            }
-            $this->orderMetadata = $result;
-        }
-
-        return $this->orderMetadata;
-    }
-
-    /**
-     * Get all order status
-     *
-     * @return string
-     */
-    private function getAllOrderStatus()
-    {
-        if (!$this->orderStatus) {
-            $url = '/exchange/rest/ms/xml/Workflow/list?filter=code%3DCustomerOrder';
-
-            $xml     = $this->handleRequest($url, 'GET');
-            $xmlData = $this->parsingXmlDocument($xml);
-            foreach ($xmlData->xpath('workflow/state') as $state) {
-                $result[$state->attributes()->name->__toString()] = $state->uuid->__toString();
-            }
-            $this->orderStatus = $result;
-        }
-
-        return $this->orderStatus;
-    }
-
-    /**
-     * Get customer orders Xml
-     *
-     * @param array $filter
-     * @param int   $count
-     * @param int   $start
+     * @param array $company
      *
      * @return SimpleXMLElement
      */
-    private function getCustomerOrdersXml($filter = [], $count = 1000, $start = 0)
+    private function createCompanyXml($company)
     {
-        $url    = '/exchange/rest/ms/xml/CustomerOrder/list?' . $this->buildUrl($filter, $count, $start);
-        $result = $this->handleRequest($url, 'GET');
+        $resultXML = simplexml_load_string('<company></company>');
+        $resultXML->addAttribute('name', $company['name']);
+        $resultXML->addChild('code', $company['code']);
+        $resultXML->addChild('contact');
+        $resultXML->contact->addAttribute('email', $company['email']);
 
-        return $result;
+        return $resultXML;
     }
 
     /**
-     * Update customer orders
+     * Create new good
      *
-     * @param array $orders
+     * @param array $product Product
+     *
+     * @return SimpleXMLElement
      */
-    public function updateCustomerOrders($orders)
+    private function createGoodXml($product)
     {
-        foreach ($orders as $order) {
-            $this->createCustomerOrder($order);
-        }
+        $dataXML = simplexml_load_string('<good></good>');
+        $dataXML->addAttribute('name', $product['name']);
+        $dataXML->addAttribute('salePrice', $product['salePrice']);
+        $dataXML->addAttribute('vat', $product['vat']);
+        $dataXML->addAttribute('productCode', $product['productCode']);
+        $dataXML->code         = $product['product_sku_id'];
+        $dataXML->externalcode = $product['product_sku_id'];
+
+        return $dataXML;
     }
 
     /**
@@ -444,7 +272,6 @@ class MoySkladLogic extends ObjectModel
     private function createCustomerOrder($order)
     {
         $orderStatus = $this->getAllOrderStatus();
-        //        $orderMetadata = $this->getOrderMetadata();
 
         $resultXML = simplexml_load_string('<customerOrder></customerOrder>');
         $resultXML->addAttribute('targetAgentUuid', $this->getMyCompanyId());
@@ -512,6 +339,168 @@ class MoySkladLogic extends ObjectModel
         $this->handleRequest($url, 'PUT', $XML->asXML());
 
         return true;
+    }
+
+    /**
+     * Get collection id
+     *
+     * @param String $xmlData
+     *
+     * @return array
+     */
+    private function getCollectionId($xmlData)
+    {
+        $temp = $this->parsingXmlDocument($xmlData);
+        $id   = [];
+        foreach ($temp->xpath('id') as $collectionId) {
+            $id[] = $collectionId->__toString();
+        }
+
+        return $id;
+    }
+
+    /**
+     * Get list of goods
+     *
+     * @param array $filter
+     * @param int   $count
+     * @param int   $start
+     *
+     * @return string XML document
+     */
+    private function getGoodsXml($filter = [], $count = 1000, $start = 0)
+    {
+        $url    = '/exchange/rest/ms/xml/Good/list?' . $this->buildUrl($filter, $count, $start);
+        $result = $this->handleRequest($url, 'GET');
+
+        return $result;
+    }
+
+    /**
+     * Get existing goods
+     *
+     * @param $products
+     *
+     * @return string XML document
+     */
+    private function getExistingGoodsXml($products)
+    {
+        $filter['externalCode'] = [];
+        foreach ($products as $product) {
+            $filter['externalCode'][] = '=' . $product['product_sku_id'];
+        }
+        $result = $this->getGoodsXml($filter);
+
+        return $result;
+    }
+
+    /**
+     * Get company xml
+     *
+     * @param array $filter
+     * @param int   $count
+     * @param int   $start
+     *
+     * @return SimpleXMLElement
+     */
+    private function getCompaniesXml($filter = [], $count = 1000, $start = 0)
+    {
+        $url    = '/exchange/rest/ms/xml/Company/list?' . $this->buildUrl($filter, $count, $start);
+        $result = $this->handleRequest($url, 'GET');
+
+        return $result;
+    }
+
+    /**
+     * Get existing companies
+     *
+     * @param array $companies
+     *
+     * @return string XML document
+     */
+    private function getExistingCompaniesXml($companies)
+    {
+        $filter['code'] = [];
+        foreach ($companies as $company) {
+            $filter['code'][] = '=' . $company['code'];
+        }
+        $result = $this->getCompaniesXml($filter);
+
+        return $result;
+    }
+
+    /**
+     * Отримання id компанії
+     *
+     * @return string
+     */
+    private function getMyCompanyId()
+    {
+        if (!$this->myCompanyId) {
+            $url = '/exchange/rest/ms/xml/MyCompany/list';
+
+            $xmlData           = $this->parsingXmlDocument($this->handleRequest($url, 'GET'));
+            $this->myCompanyId = $xmlData->myCompany->uuid->__toString();
+        }
+
+        return $this->myCompanyId;
+    }
+
+    /**
+     * Get all order status
+     *
+     * @return string
+     */
+    private function getAllOrderStatus()
+    {
+        if (!$this->orderStatus) {
+            $url = '/exchange/rest/ms/xml/Workflow/list?filter=code%3DCustomerOrder';
+
+            $xml     = $this->handleRequest($url, 'GET');
+            $xmlData = $this->parsingXmlDocument($xml);
+
+            $result = '';
+            foreach ($xmlData->xpath('workflow/state') as $state) {
+                $result[$state->attributes()->name->__toString()] = $state->uuid->__toString();
+            }
+            $this->orderStatus = $result;
+        }
+
+        return $this->orderStatus;
+    }
+
+    /**
+     * Get order statuses
+     *
+     * @param array $filter
+     * @param int   $count
+     * @param int   $start
+     *
+     * @return SimpleXMLElement
+     */
+    private function getOrderStatusesXml($filter = [], $count = 1000, $start = 0)
+    {
+        $url    = '/exchange/rest/ms/xml/Workflow/list?' . $this->buildUrl($filter, $count, $start);
+        $result = $this->handleRequest($url, 'GET');
+
+        return $result;
+    }
+
+    /**
+     * Get customer orders Xml
+     *
+     * @param array $filter
+     * @param int   $count
+     * @param int   $start
+     *
+     * @return SimpleXMLElement
+     */
+    private function getCustomerOrdersXml($filter = [], $count = 1000, $start = 0)
+    {
+        $url    = '/exchange/rest/ms/xml/CustomerOrder/list?' . $this->buildUrl($filter, $count, $start);
+        $result = $this->handleRequest($url, 'GET');
+
+        return $result;
     }
 }
 
