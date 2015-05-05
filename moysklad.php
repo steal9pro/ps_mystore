@@ -112,10 +112,6 @@ class MoySklad extends Module
         foreach ($productsArray as $product) {
             $productObject = new Product($product['id_product']);
 
-            if (!Validate::isLoadedObject($productObject)) {
-                // TODO: throw error
-            }
-
             $combinations = $productObject->getAttributeCombinations($this->langId);
 
             foreach ($combinations as $key => $combination) {
