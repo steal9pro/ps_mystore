@@ -164,7 +164,7 @@ class MoySkladLogic extends ObjectModel
         if ($status == 200) {
             return $out;
         } else {
-            die('Error with sending the request to the MoySklad service.');
+            throw new ErrorException('Error with sending the request to the MoySklad service.');
         }
     }
 
@@ -211,14 +211,15 @@ class MoySkladLogic extends ObjectModel
      * @param string $dataXml
      *
      * @return SimpleXMLElement
+     *
+     * @throws ErrorException
      */
     private function parsingXmlDocument($dataXml)
     {
         $dom = new domDocument;
         $dom->loadXML($dataXml);
         if (!$dom) {
-            echo 'Error while parsing the document';
-            exit;
+            throw new ErrorException('Error while parsing the document');
         }
 
         return simplexml_import_dom($dom);
@@ -342,24 +343,6 @@ class MoySkladLogic extends ObjectModel
     }
 
     /**
-     * Get collection id
-     *
-     * @param String $xmlData
-     *
-     * @return array
-     */
-    private function getCollectionId($xmlData)
-    {
-        $temp = $this->parsingXmlDocument($xmlData);
-        $id   = [];
-        foreach ($temp->xpath('id') as $collectionId) {
-            $id[] = $collectionId->__toString();
-        }
-
-        return $id;
-    }
-
-    /**
      * Get list of goods
      *
      * @param array $filter
@@ -459,7 +442,7 @@ class MoySkladLogic extends ObjectModel
             $xml     = $this->handleRequest($url, 'GET');
             $xmlData = $this->parsingXmlDocument($xml);
 
-            $result = '';
+            $result = null;
             foreach ($xmlData->xpath('workflow/state') as $state) {
                 $result[$state->attributes()->name->__toString()] = $state->uuid->__toString();
             }
@@ -467,23 +450,6 @@ class MoySkladLogic extends ObjectModel
         }
 
         return $this->orderStatus;
-    }
-
-    /**
-     * Get order statuses
-     *
-     * @param array $filter
-     * @param int   $count
-     * @param int   $start
-     *
-     * @return SimpleXMLElement
-     */
-    private function getOrderStatusesXml($filter = [], $count = 1000, $start = 0)
-    {
-        $url    = '/exchange/rest/ms/xml/Workflow/list?' . $this->buildUrl($filter, $count, $start);
-        $result = $this->handleRequest($url, 'GET');
-
-        return $result;
     }
 
     /**
