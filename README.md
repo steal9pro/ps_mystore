@@ -18,4 +18,4 @@ mv ps_moysklad/ YourShop/modules/
 ```
 * Go to the settings module and input `Login` and `Password` to MoySklad service
 ![Screenshot](http://s13.postimg.org/laeuctrxj/Modules_Test_Shop.png)
-* Press `Submit` to export data (`Goods`, `Сontracting parties` and `Customer orders`) into MoSklad
+* Press `Submit` to export data (`Goods`, `Сontracting parties` and `Customer orders`) into MoySklad
